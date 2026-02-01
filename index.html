@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pink Photocard Binder</title>
+<style>
+:root{
+ --bg1:#ffe6ef; --bg2:#ffd1e3; --accent:#f29ab5;
+ --border:#f6b6cc; --slot:#fff7fa; --text:#6b4b57;
+}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;}
+body{margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--text);}
+.wrap{max-width:430px;margin:auto;padding:16px;}
+h1{text-align:center;margin:10px 0;}
+button{border:none;border-radius:14px;padding:12px;font-weight:700;}
+.primary{background:var(--accent);color:#fff;width:100%;}
+.card{background:#fff;border:2px solid var(--border);border-radius:18px;padding:14px;margin-top:14px;}
+.grid{display:grid;gap:12px;}
+.album{padding:14px;border-radius:14px;border:2px solid var(--border);background:#fff;}
+.page{display:grid;gap:10px;}
+.slot{aspect-ratio:2/3;background:var(--slot);border:2px dashed var(--border);
+ border-radius:12px;display:flex;align-items:center;justify-content:center;color:#c48a9f;}
+.slot img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;}
+.modal .box{background:#fff;border-radius:18px;padding:16px;width:90%;max-width:360px;}
+input,select{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);}
+input[type=file]{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="home">
+<h1>💗 My Binder</h1>
+<div class="card grid">
+<button class="primary" onclick="openCreate()">➕ Create New Album</button>
+<button class="primary" onclick="openAlbums()">📂 View Albums</button>
+</div>
+</div>
+
+<div id="albums" style="display:none">
+<h1>Albums</h1>
+<div id="albumList" class="grid"></div>
+<button class="primary" onclick="goHome()">← Back</button>
+</div>
+
+<div id="binder" style="display:none">
+<h1 id="binderTitle"></h1>
+<div class="card">
+<div id="page" class="page"></div>
+</div>
+<button class="primary" onclick="cam.click()">📸 Add card</button>
+<button class="primary" onclick="openAlbums()">← Albums</button>
+</div>
+
+<div class="modal" id="createModal">
+<div class="box">
+<h3>Create Album</h3>
+<input id="albumName" placeholder="Album name">
+<select id="pocket">
+<option value="4">4-pocket</option>
+<option value="9">9-pocket</option>
+</select><br><br>
+<button class="primary" onclick="createAlbum()">Create</button>
+</div>
+</div>
+
+<div class="modal" id="cardModal">
+<div class="box">
+<h3>Card details</h3>
+<input id="era" placeholder="Era name">
+<input id="price" type="number" placeholder="Price bought (S$)">
+<button class="primary" onclick="saveCard()">Save</button>
+</div>
+</div>
+
+<input id="cam" type="file" accept="image/*" capture="environment">
+
+</div>
+
+<script>
+let albums=[];
+let current=null;
+let tempImg=null;
+
+function goHome(){
+ home.style.display="block";
+ albumsDiv.style.display="none";
+ binder.style.display="none";
+}
+
+function openCreate(){createModal.style.display="flex";}
+function openAlbums(){
+ home.style.display="none";
+ albumsDiv.style.display="block";
+ binder.style.display="none";
+ renderAlbums();
+}
+
+function createAlbum(){
+ const name=albumName.value.trim();
+ if(!name)return;
+ albums.push({name,pocket:+pocket.value,cards:[]});
+ createModal.style.display="none";
+ openBinder(albums.length-1);
+}
+
+function renderAlbums(){
+ albumList.innerHTML="";
+ albums.forEach((a,i)=>{
+  const d=document.createElement("div");
+  d.className="album";
+  d.innerHTML=`<b>${a.name}</b><br>${a.pocket}-pocket • ${a.cards.length} cards`;
+  d.onclick=()=>openBinder(i);
+  albumList.appendChild(d);
+ });
+}
+
+function openBinder(i){
+ current=i;
+ home.style.display="none";
+ albumsDiv.style.display="none";
+ binder.style.display="block";
+ binderTitle.textContent=albums[i].name;
+ renderBinder();
+}
+
+function renderBinder(){
+ const a=albums[current];
+ const slots=a.pocket;
+ page.style.gridTemplateColumns=`repeat(${a.pocket===4?2:3},1fr)`;
+ page.innerHTML="";
+ for(let i=0;i<slots;i++){
+  const s=document.createElement("div");
+  s.className="slot";
+  if(a.cards[i]){
+   const img=document.createElement("img");
+   img.src=a.cards[i].img;
+   s.appendChild(img);
+  }else s.textContent="empty";
+  page.appendChild(s);
+ }
+}
+
+function autoCrop(src){
+ return new Promise(res=>{
+  const img=new Image();
+  img.src=src;
+  img.onload=()=>{
+   const r=2/3;
+   let sw=img.width,sh=img.height,cw,ch,x,y;
+   if(sw/sh>r){ch=sh;cw=ch*r;x=(sw-cw)/2;y=0;}
+   else{cw=sw;ch=cw/r;x=0;y=(sh-ch)/2;}
+   const c=document.createElement("canvas");
+   c.width=cw;c.height=ch;
+   c.getContext("2d").drawImage(img,x,y,cw,ch,0,0,cw,ch);
+   res(c.toDataURL("image/jpeg",0.9));
+  };
+ });
+}
+
+cam.onchange=e=>{
+ const f=e.target.files[0];
+ if(!f)return;
+ const r=new FileReader();
+ r.onload=async()=>{
+  tempImg=await autoCrop(r.result);
+  cardModal.style.display="flex";
+ };
+ r.readAsDataURL(f);
+};
+
+function saveCard(){
+ albums[current].cards.push({
+  img:tempImg,
+  era:era.value,
+  price:price.value
+ });
+ era.value="";price.value="";
+ cardModal.style.display="none";
+ renderBinder();
+}
+
+const home=document.getElementById("home");
+const albumsDiv=document.getElementById("albums");
+const binder=document.getElementById("binder");
+</script>
+</body>
+</html>
