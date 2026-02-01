@@ -17,7 +17,7 @@ button{border:none;border-radius:14px;padding:12px;font-weight:700;}
 .primary{background:var(--accent);color:#fff;width:100%;}
 .card{background:#fff;border:2px solid var(--border);border-radius:18px;padding:14px;margin-top:14px;}
 .grid{display:grid;gap:12px;}
-.album{padding:14px;border-radius:14px;border:2px solid var(--border);background:#fff;}
+.album{padding:14px;border-radius:14px;border:2px solid var(--border);background:#fff;cursor:pointer;}
 .page{display:grid;gap:10px;}
 .slot{aspect-ratio:2/3;background:var(--slot);border:2px dashed var(--border);
  border-radius:12px;display:flex;align-items:center;justify-content:center;color:#c48a9f;}
@@ -26,53 +26,93 @@ button{border:none;border-radius:14px;padding:12px;font-weight:700;}
 .modal .box{background:#fff;border-radius:18px;padding:16px;width:90%;max-width:360px;}
 input,select{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);}
 input[type=file]{display:none;}
+.small{font-size:12px;color:#a26d82;line-height:1.35;}
+.row{display:flex;gap:10px;align-items:center;}
+.row button{flex:1;}
+.danger{background:#ffd6e3;color:#7b2f45;}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <div id="home">
-<h1>💗 My Binder</h1>
-<div class="card grid">
-<button class="primary" onclick="openCreate()">➕ Create New Album</button>
-<button class="primary" onclick="openAlbums()">📂 View Albums</button>
-</div>
+  <h1>💗 My Binder</h1>
+  <div class="card grid">
+    <button class="primary" onclick="openCreate()">➕ Create New Album</button>
+    <button class="primary" onclick="openAlbums()">📂 View Albums</button>
+    <div class="small">
+      ✅ Auto-saves on this device.<br>
+      Tip: Use <b>Safari → Add to Home Screen</b> for the app feel.
+    </div>
+  </div>
 </div>
 
 <div id="albums" style="display:none">
-<h1>Albums</h1>
-<div id="albumList" class="grid"></div>
-<button class="primary" onclick="goHome()">← Back</button>
+  <h1>Albums</h1>
+  <div id="albumList" class="grid"></div>
+  <div class="card grid">
+    <button class="primary" onclick="openCreate()">➕ Create New Album</button>
+    <button class="primary danger" onclick="confirmReset()">🗑️ Reset all data</button>
+    <button class="primary" onclick="goHome()">← Back</button>
+    <div class="small">Reset clears albums & cards saved on this device.</div>
+  </div>
 </div>
 
 <div id="binder" style="display:none">
-<h1 id="binderTitle"></h1>
-<div class="card">
-<div id="page" class="page"></div>
-</div>
-<button class="primary" onclick="cam.click()">📸 Add card</button>
-<button class="primary" onclick="openAlbums()">← Albums</button>
+  <h1 id="binderTitle"></h1>
+  <div class="card">
+    <div id="page" class="page"></div>
+  </div>
+  <div class="card grid">
+    <button class="primary" onclick="cam.click()">📸 Add card</button>
+    <button class="primary" onclick="openAlbums()">← Albums</button>
+    <div class="small">Album layout is locked to the pocket type you chose.</div>
+  </div>
 </div>
 
 <div class="modal" id="createModal">
-<div class="box">
-<h3>Create Album</h3>
-<input id="albumName" placeholder="Album name">
-<select id="pocket">
-<option value="4">4-pocket</option>
-<option value="9">9-pocket</option>
-</select><br><br>
-<button class="primary" onclick="createAlbum()">Create</button>
-</div>
+  <div class="box">
+    <h3 style="margin:0 0 10px;">Create Album</h3>
+    <input id="albumName" placeholder="Album name (e.g. IVE – Wonyoung)">
+    <div style="height:10px;"></div>
+    <select id="pocket">
+      <option value="4">4-pocket</option>
+      <option value="9">9-pocket</option>
+    </select>
+    <div style="height:14px;"></div>
+    <div class="row">
+      <button class="primary" onclick="createAlbum()">Create</button>
+      <button class="primary danger" onclick="closeCreate()">Cancel</button>
+    </div>
+    <div class="small" style="margin-top:10px;">Pocket type is saved with the album.</div>
+  </div>
 </div>
 
 <div class="modal" id="cardModal">
-<div class="box">
-<h3>Card details</h3>
-<input id="era" placeholder="Era name">
-<input id="price" type="number" placeholder="Price bought (S$)">
-<button class="primary" onclick="saveCard()">Save</button>
+  <div class="box">
+    <h3 style="margin:0 0 10px;">Card details</h3>
+    <input id="era" placeholder="Era name (e.g. MAXIDENT)">
+    <div style="height:10px;"></div>
+    <input id="price" type="number" inputmode="decimal" placeholder="Price bought (S$)">
+    <div style="height:14px;"></div>
+    <div class="row">
+      <button class="primary" onclick="saveCard()">Save</button>
+      <button class="primary danger" onclick="cancelCard()">Retake</button>
+    </div>
+    <div class="small" style="margin-top:10px;">Photo is auto-cropped to photocard ratio (2:3).</div>
+  </div>
 </div>
+
+<div class="modal" id="resetModal">
+  <div class="box">
+    <h3 style="margin:0 0 10px;">Reset everything?</h3>
+    <div class="small">This will delete all albums & cards saved on this device. This cannot be undone.</div>
+    <div style="height:14px;"></div>
+    <div class="row">
+      <button class="primary danger" onclick="doReset()">Yes, reset</button>
+      <button class="primary" onclick="closeReset()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <input id="cam" type="file" accept="image/*" capture="environment">
@@ -80,111 +120,217 @@ input[type=file]{display:none;}
 </div>
 
 <script>
-let albums=[];
-let current=null;
-let tempImg=null;
+const STORAGE_KEY = "pcBinder.v1";
+
+/** Albums schema:
+ * [{ name: string, pocket: 4|9, cards: [{img, era, price, addedAt}] }]
+ */
+let albums = [];
+let current = null;
+let tempImg = null;
+
+function saveToStorage(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ albums }));
+  }catch(e){
+    alert("Storage is full. Try fewer photos or smaller images.");
+    console.error(e);
+  }
+}
+function loadFromStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(data && Array.isArray(data.albums)) albums = data.albums;
+  }catch(e){
+    console.error("Failed to load storage", e);
+  }
+}
+
+const home = document.getElementById("home");
+const albumsDiv = document.getElementById("albums");
+const binder = document.getElementById("binder");
+const createModal = document.getElementById("createModal");
+const cardModal = document.getElementById("cardModal");
+const resetModal = document.getElementById("resetModal");
 
 function goHome(){
- home.style.display="block";
- albumsDiv.style.display="none";
- binder.style.display="none";
+  home.style.display="block";
+  albumsDiv.style.display="none";
+  binder.style.display="none";
+}
+function openCreate(){ createModal.style.display="flex"; document.getElementById("albumName").focus(); }
+function closeCreate(){ createModal.style.display="none"; document.getElementById("albumName").value=""; document.getElementById("pocket").value="4"; }
+function openAlbums(){
+  home.style.display="none";
+  albumsDiv.style.display="block";
+  binder.style.display="none";
+  renderAlbums();
 }
 
-function openCreate(){createModal.style.display="flex";}
-function openAlbums(){
- home.style.display="none";
- albumsDiv.style.display="block";
- binder.style.display="none";
- renderAlbums();
-}
+/** Albums */
+const albumList = document.getElementById("albumList");
+const binderTitle = document.getElementById("binderTitle");
+const page = document.getElementById("page");
 
 function createAlbum(){
- const name=albumName.value.trim();
- if(!name)return;
- albums.push({name,pocket:+pocket.value,cards:[]});
- createModal.style.display="none";
- openBinder(albums.length-1);
+  const name = document.getElementById("albumName").value.trim();
+  if(!name){ alert("Please name your album."); return; }
+
+  const exists = albums.some(a => (a.name||"").toLowerCase() === name.toLowerCase());
+  if(exists && !confirm("An album with this name already exists. Create another anyway?")) return;
+
+  const pocket = +document.getElementById("pocket").value;
+  albums.push({ name, pocket, cards: [] });
+  saveToStorage();
+  closeCreate();
+  openBinder(albums.length-1);
 }
 
 function renderAlbums(){
- albumList.innerHTML="";
- albums.forEach((a,i)=>{
-  const d=document.createElement("div");
-  d.className="album";
-  d.innerHTML=`<b>${a.name}</b><br>${a.pocket}-pocket • ${a.cards.length} cards`;
-  d.onclick=()=>openBinder(i);
-  albumList.appendChild(d);
- });
+  albumList.innerHTML = "";
+  if(albums.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "album";
+    empty.innerHTML = "<b>No albums yet</b><br><span class='small'>Create one to start collecting 💗</span>";
+    albumList.appendChild(empty);
+    return;
+  }
+  albums.forEach((a,i)=>{
+    const d = document.createElement("div");
+    d.className="album";
+    const count = (a.cards||[]).length;
+    d.innerHTML = `<b>${escapeHtml(a.name||"Untitled")}</b><br>${a.pocket}-pocket • ${count} card${count===1?"":"s"}`;
+    d.onclick = ()=>openBinder(i);
+    albumList.appendChild(d);
+  });
 }
 
 function openBinder(i){
- current=i;
- home.style.display="none";
- albumsDiv.style.display="none";
- binder.style.display="block";
- binderTitle.textContent=albums[i].name;
- renderBinder();
+  current = i;
+  home.style.display="none";
+  albumsDiv.style.display="none";
+  binder.style.display="block";
+  binderTitle.textContent = albums[i].name || "Untitled";
+  renderBinder();
 }
 
 function renderBinder(){
- const a=albums[current];
- const slots=a.pocket;
- page.style.gridTemplateColumns=`repeat(${a.pocket===4?2:3},1fr)`;
- page.innerHTML="";
- for(let i=0;i<slots;i++){
-  const s=document.createElement("div");
-  s.className="slot";
-  if(a.cards[i]){
-   const img=document.createElement("img");
-   img.src=a.cards[i].img;
-   s.appendChild(img);
-  }else s.textContent="empty";
-  page.appendChild(s);
- }
+  const a = albums[current];
+  const slots = a.pocket; // 4 or 9 (single-page demo)
+  page.style.gridTemplateColumns = `repeat(${a.pocket===4?2:3},1fr)`;
+  page.innerHTML = "";
+  for(let i=0;i<slots;i++){
+    const s = document.createElement("div");
+    s.className = "slot";
+    if(a.cards && a.cards[i]){
+      const img = document.createElement("img");
+      img.src = a.cards[i].img;
+      img.alt = a.cards[i].era || "photocard";
+      s.appendChild(img);
+      s.onclick = () => {
+        const c = a.cards[i];
+        alert(`Era: ${c.era || "-"}\nPrice: ${c.price ? "S$"+c.price : "-"}\nAdded: ${new Date(c.addedAt||Date.now()).toLocaleString()}`);
+      };
+    }else{
+      s.textContent = "empty";
+    }
+    page.appendChild(s);
+  }
 }
 
-function autoCrop(src){
- return new Promise(res=>{
-  const img=new Image();
-  img.src=src;
-  img.onload=()=>{
-   const r=2/3;
-   let sw=img.width,sh=img.height,cw,ch,x,y;
-   if(sw/sh>r){ch=sh;cw=ch*r;x=(sw-cw)/2;y=0;}
-   else{cw=sw;ch=cw/r;x=0;y=(sh-ch)/2;}
-   const c=document.createElement("canvas");
-   c.width=cw;c.height=ch;
-   c.getContext("2d").drawImage(img,x,y,cw,ch,0,0,cw,ch);
-   res(c.toDataURL("image/jpeg",0.9));
+/** Add card */
+const cam = document.getElementById("cam");
+cam.onchange = (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = async()=>{
+    tempImg = await autoCrop(r.result);
+    cardModal.style.display="flex";
+    document.getElementById("era").focus();
   };
- });
-}
-
-cam.onchange=e=>{
- const f=e.target.files[0];
- if(!f)return;
- const r=new FileReader();
- r.onload=async()=>{
-  tempImg=await autoCrop(r.result);
-  cardModal.style.display="flex";
- };
- r.readAsDataURL(f);
+  r.readAsDataURL(f);
 };
 
-function saveCard(){
- albums[current].cards.push({
-  img:tempImg,
-  era:era.value,
-  price:price.value
- });
- era.value="";price.value="";
- cardModal.style.display="none";
- renderBinder();
+function cancelCard(){
+  tempImg = null;
+  cam.value = "";
+  cardModal.style.display="none";
 }
 
-const home=document.getElementById("home");
-const albumsDiv=document.getElementById("albums");
-const binder=document.getElementById("binder");
+function saveCard(){
+  if(current === null){ alert("Please select an album first."); return; }
+  const a = albums[current];
+  a.cards = a.cards || [];
+  a.cards.push({
+    img: tempImg,
+    era: document.getElementById("era").value.trim(),
+    price: (document.getElementById("price").value||"").trim(),
+    addedAt: Date.now()
+  });
+  saveToStorage();
+
+  document.getElementById("era").value="";
+  document.getElementById("price").value="";
+  tempImg=null;
+  cam.value="";
+  cardModal.style.display="none";
+  renderBinder();
+}
+
+async function autoCrop(src){
+  return new Promise((res)=>{
+    const img = new Image();
+    img.src = src;
+    img.onload = ()=>{
+      const r = 2/3;
+      let sw = img.width, sh = img.height, cw, ch, x, y;
+
+      if(sw/sh > r){
+        ch = sh; cw = ch*r; x = (sw-cw)/2; y = 0;
+      }else{
+        cw = sw; ch = cw/r; x = 0; y = (sh-ch)/2;
+      }
+
+      // Downscale to keep storage reasonable (important for localStorage)
+      const TARGET_H = 900;
+      const scale = Math.min(1, TARGET_H / ch);
+      const outW = Math.round(cw*scale);
+      const outH = Math.round(ch*scale);
+
+      const c = document.createElement("canvas");
+      c.width = outW; c.height = outH;
+      c.getContext("2d").drawImage(img, x, y, cw, ch, 0, 0, outW, outH);
+      res(c.toDataURL("image/jpeg", 0.85));
+    };
+  });
+}
+
+/** Reset */
+function confirmReset(){ resetModal.style.display="flex"; }
+function closeReset(){ resetModal.style.display="none"; }
+function doReset(){
+  albums = [];
+  current = null;
+  tempImg = null;
+  localStorage.removeItem(STORAGE_KEY);
+  resetModal.style.display="none";
+  openAlbums();
+}
+
+/** Helpers */
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, (s) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[s]);
+}
+
+/** Boot */
+loadFromStorage();
+goHome();
 </script>
 </body>
 </html>
+
